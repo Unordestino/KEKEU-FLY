@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mini Flappy Game</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #70c5ce;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    canvas {
+      border: 2px solid #000;
+      background: #70c5ce;
+      display: block;
+    }
+	
+	
+    /* Estilo do quadro de aviso */
+    #updateBox {
+      position: static;
+      top: 40px;
+      right: 200px;
+      width: 250px;
+      height: 320px;
+
+      padding: 70px;
+      font-size: 16px;
+
+  
+
+    }
+
+    #updateBox h3 {
+      font-size: 18px;
+      margin-bottom: 15px;
+    }
+
+    #updateBox p {
+      font-size: 14px;
+      color: #333;
+      line-height: 1.5;
+      word-wrap: break-word;
+      margin: 0;
+      padding: 0;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="400" height="600"></canvas>
+  <!-- Adicionando os elementos de áudio -->
+  <audio id="jumpSound" src="jump.mp3"></audio>
+  <audio id="gameOverSound" src="gameover.mp3"></audio>
+
+    <!-- Quadro de Atualizações -->
+  <div id="updateBox">
+    <iframe src="https://xat.com/embed/chat.php#id=220530040&gn=KEKEU" width="600" height="436" frameborder="0" scrolling="no"></iframe><br><small><a target="_BLANK" href="https://xat.com/web_gear/chat/embed.php?id=220530040&GroupName=KEKEU">Get KEKEU chat group</a> | <a target="_BLANK" href="https://xat.com/KEKEU"> Go to KEKEU website</a></small><br>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    // Load bird image
+    const birdImg = new Image();
+    birdImg.src = "https://i.ibb.co/fFcgQzW/esse.png";
+
+    // Load audio elements
+    const jumpSound = document.getElementById("jumpSound");
+    const gameOverSound = document.getElementById("gameOverSound");
+
+    // Game variables
+    let birdX = 50;
+    let birdY = 200;
+    let birdDY = 0;
+    const gravity = 0.5;
+    const jump = -8;
+
+    let pipes = [];
+    const pipeWidth = 50;
+    const pipeGap = 180;
+    const pipeSpeed = 2;
+
+    let score = 0;
+    let gameOver = false;
+    let gameStarted = false; // Track if the game has started
+
+    // Event listener for jump and game control
+    document.addEventListener("keydown", (e) => {
+      if (e.code === "Space") {
+        if (!gameStarted) {
+          startGame();
+        } else if (gameOver) {
+          resetGame();
+        } else {
+          birdDY = jump;
+          playJumpSound(); // Play sound on jump
+        }
+      }
+    });
+
+    // Function to play the jump sound
+    function playJumpSound() {
+      jumpSound.currentTime = 0; // Reset audio to the beginning
+      jumpSound.play();         // Play audio
+    }
+
+    // Function to play the game over sound
+    function playGameOverSound() {
+      gameOverSound.currentTime = 0; // Reset audio to the beginning
+      gameOverSound.play();          // Play audio
+    }
+
+    // Create pipes
+    function createPipe() {
+      const pipeHeight = Math.random() * (canvas.height - pipeGap - 50) + 50;
+      pipes.push({
+        x: canvas.width,
+        top: pipeHeight,
+        bottom: pipeHeight + pipeGap,
+      });
+    }
+
+    // Update game state
+    function updateGame() {
+      if (!gameStarted || gameOver) return;
+
+      // Bird physics
+      birdDY += gravity;
+      birdY += birdDY;
+
+      // Pipes movement
+      pipes.forEach((pipe, index) => {
+        pipe.x -= pipeSpeed;
+
+        // Check collision
+        if (
+          birdX + 50 > pipe.x && birdX < pipe.x + pipeWidth &&
+          (birdY < pipe.top || birdY + 50 > pipe.bottom)
+        ) {
+          gameOver = true;
+          playGameOverSound(); // Play sound when game over
+        }
+
+        // Remove pipe and increase score
+        if (pipe.x + pipeWidth < 0) {
+          pipes.splice(index, 1);
+          score++;
+        }
+      });
+
+      // Add new pipes
+      if (pipes.length === 0 || pipes[pipes.length - 1].x < canvas.width / 2) {
+        createPipe();
+      }
+
+      // Check if bird hits ground or sky
+      if (birdY > canvas.height || birdY < 0) {
+        gameOver = true;
+        playGameOverSound(); // Play sound when game over
+      }
+    }
+
+    // Draw everything
+    function drawGame() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw bird
+      ctx.drawImage(birdImg, birdX, birdY, 50, 50);
+
+      // Draw pipes
+      pipes.forEach((pipe) => {
+        ctx.fillStyle = "#3e8914";
+        ctx.fillRect(pipe.x, 0, pipeWidth, pipe.top); // Top pipe
+        ctx.fillRect(pipe.x, pipe.bottom, pipeWidth, canvas.height - pipe.bottom); // Bottom pipe
+      });
+
+      // Draw score
+      ctx.fillStyle = "#000";
+      ctx.font = "20px Arial";
+      ctx.fillText(`Score: ${score}`, 10, 30);
+
+      if (!gameStarted) {
+        ctx.fillStyle = "#000";
+        ctx.font = "30px Arial";
+        ctx.fillText("Press SPACE to Start", 70, canvas.height / 2);
+      }
+
+      if (gameOver) {
+        ctx.fillStyle = "red";
+        ctx.font = "30px Arial";
+        ctx.fillText("Game Over!", canvas.width / 4, canvas.height / 2 - 30);
+        ctx.fillStyle = "#000";
+        ctx.font = "20px Arial";
+        ctx.fillText("Press SPACE to Restart", 100, canvas.height / 2 + 20);
+      }
+    }
+
+    // Reset game state
+    function resetGame() {
+      birdX = 50;
+      birdY = 200;
+      birdDY = 0;
+      pipes = [];
+      score = 0;
+      gameOver = false;
+      gameStarted = false;
+    }
+
+    // Start game
+    function startGame() {
+      resetGame();
+      gameStarted = true;
+      createPipe();
+    }
+
+    // Game loop
+    function gameLoop() {
+      updateGame();
+      drawGame();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Start the game loop
+    gameLoop();
+  </script>
+</body>
+</html>
